@@ -12,6 +12,7 @@
   let editing = null;
   let adding = false;
   let drag = null;
+  let pageScroll = {x: 0, y: 0};
 
   function validate(items, failure = 'Choose a supported key combination.') {
     if (!Array.isArray(items) || items.some(item =>
@@ -237,11 +238,29 @@
   $('edit-keys').addEventListener('click', () => {
     document.dispatchEvent(new Event('inputeditoropen'));
     deselect(); renderList();
-    dialog.showModal(); document.body.classList.add('editing-keys');
+    pageScroll = {x: window.scrollX, y: window.scrollY};
+    document.body.style.setProperty('--keys-page-top', `${-pageScroll.y}px`);
+    document.body.style.setProperty('--keys-page-left', `${-pageScroll.x}px`);
+    document.documentElement.classList.add('editing-keys');
+    document.body.classList.add('editing-keys');
+    try {
+      dialog.showModal();
+      $('keys-title').focus({preventScroll: true});
+    } catch (issue) {
+      restorePageScroll();
+      throw issue;
+    }
   });
+  function restorePageScroll() {
+    document.documentElement.classList.remove('editing-keys');
+    document.body.classList.remove('editing-keys');
+    document.body.style.removeProperty('--keys-page-top');
+    document.body.style.removeProperty('--keys-page-left');
+    window.scrollTo({left: pageScroll.x, top: pageScroll.y, behavior: 'instant'});
+  }
   // Native dialog forms close first; selection cleanup must never trap the user.
   dialog.addEventListener('close', () => {
-    document.body.classList.remove('editing-keys');
+    restorePageScroll();
     deselect();
   });
 
