@@ -120,10 +120,10 @@
     <header class="crop-header"><h2 id="keys-title">Edit keys</h2><button id="keys-close" type="button" aria-label="Close key editor">×</button></header>
     <div class="keybind-content">
       <ol id="keybind-list" class="keybind-list"></ol>
+      <div class="key-form-actions"><button id="keybind-add" type="button">Add key</button></div>
       <form id="keybind-form" class="keybind-form">
-        <label for="keybind-key">Key</label><select id="keybind-key"><option value="" disabled selected>Choose a key…</option></select>
+        <label for="keybind-key">Key</label><select id="keybind-key" disabled><option value="" disabled selected>None</option></select>
         <fieldset id="keybind-modifiers"><legend>Modifiers</legend><label><input type="checkbox" value="ctrl">Ctrl</label><label><input type="checkbox" value="alt">Alt</label><label><input type="checkbox" value="shift">Shift</label><label><input type="checkbox" value="win">Win</label></fieldset>
-        <div class="key-form-actions"><button id="keybind-add" type="button" hidden>Add key</button></div>
       </form>
       <p id="keybind-error" role="alert" hidden></p>
     </div>

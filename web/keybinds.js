@@ -10,6 +10,7 @@
   let keymap;
   let saved;
   let editing = null;
+  let adding = false;
   let drag = null;
 
   function validate(items, failure = 'Choose a supported key combination.') {
@@ -34,8 +35,12 @@
 
   function syncForm() {
     keySelect.value = editing ? editing.key : '';
-    for (const input of modifiers) input.checked = editing ? editing.modifiers.includes(input.value) : false;
-    $('keybind-add').hidden = editing === null;
+    keySelect.options[0].textContent = adding ? 'Choose a key…' : 'None';
+    keySelect.disabled = editing === null && !adding;
+    for (const input of modifiers) {
+      input.checked = editing ? editing.modifiers.includes(input.value) : false;
+      input.disabled = keySelect.disabled;
+    }
   }
 
   function renderKeys() {
@@ -61,21 +66,20 @@
       name.className = 'keybind-name';
       name.textContent = chord(item);
       name.tabIndex = 0;
-      name.setAttribute('aria-label', `${chord(item)}. Drag to reorder, or use the up and down arrow keys.`);
+      name.setAttribute('role', 'button');
+      name.setAttribute('aria-pressed', String(item === editing));
+      name.setAttribute('aria-label', `${chord(item)}. Select to edit. Drag to reorder, or use the up and down arrow keys.`);
+      name.addEventListener('click', event => { if (event.detail === 0) selectItem(index); });
       name.addEventListener('keydown', event => {
+        if (['Enter', ' '].includes(event.key)) { event.preventDefault(); selectItem(index); return; }
         if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
         event.preventDefault();
         move(index, event.key === 'ArrowUp' ? -1 : 1);
       });
       row.append(name);
-      for (const [text, title, action] of [
-        ['Edit', `Edit ${chord(item)}`, () => edit(index)],
-        ['×', `Delete ${chord(item)}`, () => remove(index)],
-      ]) {
-        const button = document.createElement('button');
-        button.type = 'button'; button.textContent = text; button.setAttribute('aria-label', title);
-        button.addEventListener('click', action); row.append(button);
-      }
+      const button = document.createElement('button');
+      button.type = 'button'; button.textContent = '×'; button.setAttribute('aria-label', `Delete ${chord(item)}`);
+      button.addEventListener('click', () => remove(index)); row.append(button);
       return row;
     }));
   }
@@ -91,6 +95,7 @@
     }
     saved = items;
     editing = selected;
+    adding = false;
     syncForm(); renderKeys(); renderList(); error();
     return true;
   }
@@ -138,6 +143,10 @@
     drag = null;
     cancelAnimationFrame(current.frame);
     if (list.hasPointerCapture(current.pointer)) list.releasePointerCapture(current.pointer);
+    if (!current.placeholder) {
+      if (commit) selectItem(current.index);
+      return;
+    }
     if (commit) {
       const target = [...list.children].filter(row => row !== current.row).indexOf(current.placeholder);
       const items = [...saved];
@@ -147,11 +156,16 @@
   }
 
   list.addEventListener('pointerdown', event => {
-    if (event.button !== 0 || drag || !event.target.closest('.keybind-name')) return;
-    event.preventDefault();
     const row = event.target.closest('li');
-    const bounds = row.getBoundingClientRect();
+    if (event.button !== 0 || drag || !row || event.target.closest('button')) return;
+    event.preventDefault();
     list.setPointerCapture(event.pointerId);
+    drag = {row, index: Number(row.dataset.index), pointer: event.pointerId, startX: event.clientX, startY: event.clientY, y: event.clientY, placeholder: null, frame: null};
+  });
+
+  function startDrag() {
+    const row = drag.row;
+    const bounds = row.getBoundingClientRect();
     const placeholder = document.createElement('li');
     placeholder.className = 'keybind-placeholder';
     placeholder.setAttribute('aria-hidden', 'true');
@@ -160,13 +174,18 @@
     row.classList.add('dragging');
     row.inert = true;
     row.style.left = `${bounds.left}px`; row.style.width = `${bounds.width}px`; row.style.height = `${bounds.height}px`;
-    drag = {row, placeholder, index: Number(row.dataset.index), pointer: event.pointerId, y: event.clientY, offset: event.clientY - bounds.top, tick: null, frame: null};
+    Object.assign(drag, {placeholder, offset: drag.startY - bounds.top, tick: null});
     error(); positionDrag();
     drag.frame = requestAnimationFrame(scrollDrag);
-  });
+  }
+
   list.addEventListener('pointermove', event => {
     if (drag?.pointer !== event.pointerId) return;
-    event.preventDefault(); drag.y = event.clientY; positionDrag();
+    event.preventDefault(); drag.y = event.clientY;
+    if (!drag.placeholder) {
+      if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
+      startDrag();
+    } else positionDrag();
   });
   list.addEventListener('pointerup', event => { if (drag?.pointer === event.pointerId) finishDrag(true); });
   for (const type of ['pointercancel', 'lostpointercapture']) list.addEventListener(type, event => { if (drag?.pointer === event.pointerId) finishDrag(false); });
@@ -174,9 +193,10 @@
   window.addEventListener('blur', () => finishDrag(false));
   document.addEventListener('visibilitychange', () => { if (document.hidden) finishDrag(false); });
 
-  function edit(index) {
+  function selectItem(index) {
     finishDrag(false);
     editing = saved[index];
+    adding = false;
     syncForm(); renderList();
     form.scrollIntoView({block: 'nearest'});
     error();
@@ -184,7 +204,7 @@
 
   form.addEventListener('submit', event => event.preventDefault());
   form.addEventListener('change', () => {
-    if (!keySelect.value) return;
+    if (!keySelect.value || (editing === null && !adding)) return;
     finishDrag(false);
     const item = {key: keySelect.value, modifiers: modifiers.filter(input => input.checked).map(input => input.value)};
     const items = [...saved];
@@ -194,14 +214,22 @@
   });
   $('keybind-add').addEventListener('click', () => {
     finishDrag(false);
-    editing = null; syncForm(); renderList(); error(); keySelect.focus();
+    editing = null; adding = true; syncForm(); renderList(); error();
+    form.scrollIntoView({block: 'nearest'}); keySelect.focus();
+  });
+  function deselect() {
+    finishDrag(false);
+    editing = null; adding = false; syncForm(); renderList(); error();
+  }
+  dialog.addEventListener('pointerdown', event => {
+    if (!event.target.closest('#keybind-list li, #keybind-form, #keybind-add')) deselect();
   });
   $('edit-keys').addEventListener('click', () => {
     document.dispatchEvent(new Event('inputeditoropen'));
-    editing = null; syncForm(); renderList(); error();
+    deselect();
     dialog.showModal(); document.body.classList.add('editing-keys');
   });
-  function close() { finishDrag(false); dialog.close(); document.body.classList.remove('editing-keys'); }
+  function close() { deselect(); dialog.close(); document.body.classList.remove('editing-keys'); }
   for (const id of ['keys-done', 'keys-close']) $(id).addEventListener('click', close);
   dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
 
