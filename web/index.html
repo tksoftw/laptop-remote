@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101513">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Remote">
+  <meta name="referrer" content="no-referrer">
+  <title>Laptop Remote</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+  <script src="/desktop.js" defer></script>
+  <script src="/keybinds.js" defer></script>
+  <script src="/screen.js" defer></script>
+  <script src="/pairing.js" defer></script>
+</head>
+<body>
+  <svg class="symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="13" rx="2"/><path d="M2 20h20M9 16v4m6-4v4"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 4 6 8H3v8h3l5 4Z"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24"><path d="M11 4 6 8H3v8h3l5 4Zm5 5 6 6m0-6-6 6"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="6"/><path d="M12 2v7m-6 1h12"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="m6 14 6-6 6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 10 6 6 6-6"/></symbol>
+    <symbol id="i-pointer" viewBox="0 0 24 24"><path d="m5 3 14 10-7 1-3 7Z"/></symbol>
+  </svg>
+  <main class="remote">
+    <header class="header">
+      <div class="brand"><span class="brand-icon"><svg><use href="#i-laptop"/></svg></span><span>Laptop<br><strong>Remote</strong></span></div>
+      <div class="header-actions"><span id="connection" class="connection"><i></i><span>Connecting…</span></span><button id="screen-toggle" class="screen-toggle" type="button" aria-label="Mouse and keyboard" aria-controls="desktop-screen" aria-expanded="false" title="Mouse and keyboard"><svg><use id="screen-icon" href="#i-mouse"/></svg></button></div>
+    </header>
+    <section id="pairing-panel" class="pairing-panel" aria-labelledby="pairing-title" hidden>
+      <span class="pairing-camera" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5 9.5 3h5L16 5h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="4"/></svg></span>
+      <h1 id="pairing-title">Pair this app</h1>
+      <p>Click <strong>Pair</strong> in Laptop Remote on your laptop, then take a photo of its QR code.</p>
+      <button id="scan-qr" class="scan-qr" type="button">Scan QR code</button>
+      <input id="qr-photo" type="file" accept="image/*" capture="environment" aria-label="Photo of the pairing QR code" hidden>
+      <p class="pairing-hint">Use your camera to keep the whole QR code in view. The photo is read on your phone and is not uploaded.</p>
+      <p id="scan-status" class="scan-status" role="status" aria-live="polite"></p>
+      <details class="pairing-manual"><summary>Paste a pairing link</summary><label for="pairing-link" class="sr-only">Pairing link</label><input id="pairing-link" type="password" placeholder="Paste the full pairing link" autocomplete="off" spellcheck="false"><button id="pair-link" class="input-button" type="button">Pair app</button></details>
+    </section>
+    <div id="media-screen">
+    <section class="player" aria-labelledby="track-title">
+      <div class="player-top"><span class="eyebrow" id="playback-status">YOUR LAPTOP</span><span class="sound-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
+      <div class="disc" aria-hidden="true"><div class="disc-inner"><svg><use href="#i-laptop"/></svg></div></div>
+      <h1 id="track-title">Laptop Remote</h1>
+      <p id="track-detail">Connecting to your laptop…</p>
+      <div class="play-area">
+        <button id="play" class="play-button" type="button" aria-label="Play" disabled><svg><use id="play-icon" href="#i-play"/></svg></button>
+        <span id="play-label">Play / pause</span>
+      </div>
+    </section>
+
+    <section class="volume-panel" aria-label="Volume controls">
+      <div class="volume-heading"><h2>Volume</h2><div><output id="volume-value" for="volume">—</output><span class="percent">%</span></div></div>
+      <label class="sr-only" for="volume">Laptop volume</label>
+      <input id="volume" type="range" min="0" max="100" value="0" step="1" disabled>
+      <div class="volume-actions">
+        <button id="quieter" class="square-button" type="button" aria-label="Decrease volume by 5 percent" disabled><svg><use href="#i-minus"/></svg></button>
+        <button id="mute" class="mute-button" type="button" aria-pressed="false" disabled><svg><use id="mute-icon" href="#i-volume"/></svg><span id="mute-label">Mute</span></button>
+        <button id="louder" class="square-button" type="button" aria-label="Increase volume by 5 percent" disabled><svg><use href="#i-plus"/></svg></button>
+      </div>
+      <p id="output" class="output">Windows master volume</p>
+    </section>
+    </div>
+
+    <section id="desktop-screen" aria-labelledby="desktop-title" hidden>
+      <div id="desktop-heading" class="desktop-heading"><h1 id="desktop-title">Mouse &amp; keyboard</h1><p>Hold and drag to move the pointer.</p></div>
+      <section id="live-screen" class="live-screen" aria-label="Live laptop screen" hidden>
+        <div id="screen-viewport" class="screen-viewport" tabindex="0" aria-label="Laptop screen. Pinch to zoom and drag to pan.">
+          <img id="screen-image" alt="Live laptop screen" draggable="false" hidden>
+          <span id="screen-status" class="screen-status" role="status">Connecting…</span>
+        </div>
+        <div class="screen-tools">
+          <button id="screen-crop" type="button">Crop</button>
+          <button id="screen-retry" type="button" hidden>Retry</button>
+        </div>
+      </section>
+      <div class="joystick-panel">
+        <div id="joystick" class="joystick" role="group" aria-label="Mouse joystick. Hold and drag, or use arrow keys." aria-disabled="true" tabindex="0">
+          <span class="axis axis-horizontal"></span><span class="axis axis-vertical"></span>
+          <span class="joystick-arrow north">⌃</span><span class="joystick-arrow south">⌄</span><span class="joystick-arrow west">‹</span><span class="joystick-arrow east">›</span>
+          <div id="joystick-thumb" class="joystick-thumb"><svg><use href="#i-pointer"/></svg></div>
+        </div>
+        <div class="click-actions"><button id="left-click" class="input-button primary-click" type="button" disabled>Left click</button><button id="right-click" class="input-button" type="button" disabled>Right click</button></div>
+        <div class="scroll-actions"><button id="scroll-up" class="input-button" type="button" disabled><svg><use href="#i-up"/></svg>Scroll up</button><button id="scroll-down" class="input-button" type="button" disabled><svg><use href="#i-down"/></svg>Scroll down</button></div>
+      </div>
+      <section class="keyboard-panel" aria-labelledby="keyboard-title">
+        <h2 id="keyboard-title">Type on your laptop</h2><p>Click a text box on your laptop, then send text.</p>
+        <label for="type-text" class="sr-only">Text to type</label>
+        <input id="type-text" type="text" placeholder="Text to type…" maxlength="500" autocomplete="off" autocapitalize="sentences" enterkeyhint="send" disabled>
+        <div class="send-row"><span id="text-status" role="status" aria-live="polite"></span><button id="send-text" class="send-text" type="button" disabled>Send text <span aria-hidden="true">↗</span></button></div>
+        <div class="key-heading"><h3>Keys</h3><button id="edit-keys" type="button" disabled>Edit</button></div>
+        <div id="key-actions" class="key-actions"></div>
+      </section>
+    </section>
+
+    <div id="message" class="message" role="alert" hidden></div>
+    <button id="retry" class="retry" type="button" hidden>Reconnect</button>
+    <footer><span id="computer">Laptop controls</span><p>Keep your laptop awake while using the remote.</p><details><summary>Save to your phone</summary><p>Your phone stays paired. Save this page to open it again.</p><p>iPhone: tap Share, then Add to Home Screen.<br>Android: open the browser menu, then Add to Home screen.</p><label id="advanced-screen" class="advanced-screen" hidden>Advanced: Show screen<input id="show-screen" type="checkbox"></label></details></footer>
+  </main>
+  <dialog id="screen-crop-dialog" class="screen-crop-dialog" aria-labelledby="crop-title">
+    <header class="crop-header"><h2 id="crop-title">Crop / zoom</h2><button id="crop-close" type="button" aria-label="Cancel crop">×</button></header>
+    <div id="crop-stage" class="crop-stage"></div>
+    <div class="crop-controls">
+      <label for="crop-zoom">Zoom <output id="crop-zoom-value">1×</output></label>
+      <input id="crop-zoom" type="range" min="1" max="6" step="0.05" value="1">
+      <div class="crop-actions"><button id="crop-fit" type="button">Fit</button><button id="crop-retry" type="button" hidden>Retry</button><button id="crop-cancel" type="button">Cancel</button><button id="crop-done" type="button">Done</button></div>
+    </div>
+  </dialog>
+  <dialog id="keybind-dialog" class="keybind-dialog" aria-labelledby="keys-title">
+    <header class="crop-header"><h2 id="keys-title">Edit keys</h2><button id="keys-close" type="button" aria-label="Cancel key changes">×</button></header>
+    <div class="keybind-content">
+      <ol id="keybind-list" class="keybind-list"></ol>
+      <form id="keybind-form" class="keybind-form">
+        <label for="keybind-label">Label</label><input id="keybind-label" type="text" maxlength="24" required autocomplete="off">
+        <label for="keybind-key">Key</label><select id="keybind-key"></select>
+        <fieldset id="keybind-modifiers"><legend>Modifiers</legend><label><input type="checkbox" value="ctrl">Ctrl</label><label><input type="checkbox" value="alt">Alt</label><label><input type="checkbox" value="shift">Shift</label><label><input type="checkbox" value="win">Win</label></fieldset>
+        <div class="key-form-actions"><button id="keybind-save" type="submit">Add key</button><button id="keybind-edit-cancel" type="button" hidden>Cancel edit</button></div>
+      </form>
+      <p id="keybind-error" role="alert" hidden></p>
+    </div>
+    <div class="crop-actions"><button id="keys-cancel" type="button">Cancel</button><button id="keys-done" type="button">Done</button></div>
+  </dialog>
+</body>
+</html>

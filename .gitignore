@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.log
+artifacts/
+.env
+.env.*
+*.dpapi
+*.lnk
+*.tmp
+dist/
+build/
+.DS_Store

@@ -1,0 +1,22 @@
+name: Tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.11'
+      - run: ./setup.ps1 -NoShortcut
+        shell: pwsh
+      - run: ./.venv/Scripts/python.exe -m unittest discover -v
+      - name: Check browser scripts
+        shell: pwsh
+        run: |
+          Get-ChildItem web/*.js | ForEach-Object {
+            node --check $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Syntax check failed: $_" }
+          }
