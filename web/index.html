@@ -117,7 +117,7 @@
     </div>
   </dialog>
   <dialog id="keybind-dialog" class="keybind-dialog" aria-labelledby="keys-title">
-    <header class="crop-header"><h2 id="keys-title">Edit keys</h2><button id="keys-close" type="button" aria-label="Close key editor">×</button></header>
+    <header class="crop-header"><h2 id="keys-title">Edit keys</h2><form method="dialog"><button id="keys-close" type="submit" aria-label="Close key editor">×</button></form></header>
     <div class="keybind-content">
       <ol id="keybind-list" class="keybind-list"></ol>
       <div class="key-form-actions"><button id="keybind-add" type="button">Add key</button></div>
@@ -127,7 +127,7 @@
       </form>
       <p id="keybind-error" role="alert" hidden></p>
     </div>
-    <div class="crop-actions"><button id="keys-done" type="button">Done</button></div>
+    <form method="dialog" class="crop-actions"><button id="keys-done" type="submit">Done</button></form>
   </dialog>
 </body>
 </html>

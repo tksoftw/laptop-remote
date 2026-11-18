@@ -61,13 +61,11 @@
     list.replaceChildren(...saved.map((item, index) => {
       const row = document.createElement('li');
       row.dataset.index = index;
-      row.classList.toggle('editing', item === editing);
       const name = document.createElement('div');
       name.className = 'keybind-name';
       name.textContent = chord(item);
       name.tabIndex = 0;
       name.setAttribute('role', 'button');
-      name.setAttribute('aria-pressed', String(item === editing));
       name.setAttribute('aria-label', `${chord(item)}. Select to edit. Drag to reorder, or use the up and down arrow keys.`);
       name.addEventListener('click', event => { if (event.detail === 0) selectItem(index); });
       name.addEventListener('keydown', event => {
@@ -82,6 +80,15 @@
       button.addEventListener('click', () => remove(index)); row.append(button);
       return row;
     }));
+    updateSelection();
+  }
+
+  function updateSelection() {
+    for (const row of list.children) {
+      const selected = saved[Number(row.dataset.index)] === editing;
+      row.classList.toggle('editing', selected);
+      row.querySelector('.keybind-name').setAttribute('aria-pressed', String(selected));
+    }
   }
 
   function save(items, selected) {
@@ -157,7 +164,7 @@
 
   list.addEventListener('pointerdown', event => {
     const row = event.target.closest('li');
-    if (event.button !== 0 || drag || !row || event.target.closest('button')) return;
+    if (!event.isPrimary || event.button !== 0 || drag || !row || event.target.closest('button')) return;
     event.preventDefault();
     list.setPointerCapture(event.pointerId);
     drag = {row, index: Number(row.dataset.index), pointer: event.pointerId, startX: event.clientX, startY: event.clientY, y: event.clientY, placeholder: null, frame: null};
@@ -192,12 +199,15 @@
   list.addEventListener('contextmenu', event => event.preventDefault());
   window.addEventListener('blur', () => finishDrag(false));
   document.addEventListener('visibilitychange', () => { if (document.hidden) finishDrag(false); });
+  // A second finger or viewport movement belongs to the browser's zoom gesture.
+  dialog.addEventListener('pointerdown', event => { if (!event.isPrimary) finishDrag(false); }, {capture: true});
+  for (const type of ['resize', 'scroll']) window.visualViewport.addEventListener(type, () => finishDrag(false));
 
   function selectItem(index) {
     finishDrag(false);
     editing = saved[index];
     adding = false;
-    syncForm(); renderList();
+    syncForm(); updateSelection();
     form.scrollIntoView({block: 'nearest'});
     error();
   }
@@ -214,24 +224,26 @@
   });
   $('keybind-add').addEventListener('click', () => {
     finishDrag(false);
-    editing = null; adding = true; syncForm(); renderList(); error();
+    editing = null; adding = true; syncForm(); updateSelection(); error();
     form.scrollIntoView({block: 'nearest'}); keySelect.focus();
   });
   function deselect() {
     finishDrag(false);
-    editing = null; adding = false; syncForm(); renderList(); error();
+    editing = null; adding = false; syncForm(); updateSelection(); error();
   }
   dialog.addEventListener('pointerdown', event => {
-    if (!event.target.closest('#keybind-list li, #keybind-form, #keybind-add')) deselect();
+    if (event.isPrimary && (editing !== null || adding) && !event.target.closest('#keybind-list li, #keybind-form, #keybind-add, form[method="dialog"]')) deselect();
   });
   $('edit-keys').addEventListener('click', () => {
     document.dispatchEvent(new Event('inputeditoropen'));
-    deselect();
+    deselect(); renderList();
     dialog.showModal(); document.body.classList.add('editing-keys');
   });
-  function close() { deselect(); dialog.close(); document.body.classList.remove('editing-keys'); }
-  for (const id of ['keys-done', 'keys-close']) $(id).addEventListener('click', close);
-  dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
+  // Native dialog forms close first; selection cleanup must never trap the user.
+  dialog.addEventListener('close', () => {
+    document.body.classList.remove('editing-keys');
+    deselect();
+  });
 
   async function load() {
     try {
