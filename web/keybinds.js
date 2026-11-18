@@ -9,16 +9,17 @@
   const modifiers = [...$('keybind-modifiers').querySelectorAll('input')];
   let keymap;
   let saved;
-  let draft;
-  let editIndex = null;
+  let editing = null;
   let drag = null;
 
   function validate(items, failure = 'Choose a supported key combination.') {
-    if (!Array.isArray(items) || items.length > 64 || items.some(item =>
+    if (!Array.isArray(items) || items.some(item =>
       !item ||
       !keymap.has(item.key) || !Array.isArray(item.modifiers) || item.modifiers.length > 4 ||
       item.modifiers.some(m => !['ctrl', 'alt', 'shift', 'win'].includes(m)) ||
       new Set(item.modifiers).size !== item.modifiers.length)) throw new Error(failure);
+    if (items.length > 64) throw new Error('You can save up to 64 keys.');
+    if (items.some(item => item.key === 'delete' && item.modifiers.includes('ctrl') && item.modifiers.includes('alt'))) throw new Error('Windows does not allow Ctrl+Alt+Delete through a remote shortcut.');
     return items;
   }
 
@@ -31,11 +32,10 @@
     $('keybind-error').hidden = !text;
   }
 
-  function resetForm() {
-    form.reset();
-    editIndex = null;
-    $('keybind-save').textContent = 'Add key';
-    $('keybind-edit-cancel').hidden = true;
+  function syncForm() {
+    keySelect.value = editing ? editing.key : '';
+    for (const input of modifiers) input.checked = editing ? editing.modifiers.includes(input.value) : false;
+    $('keybind-add').hidden = editing === null;
   }
 
   function renderKeys() {
@@ -52,10 +52,11 @@
     document.dispatchEvent(new Event('keybindschange'));
   }
 
-  function renderDraft() {
-    list.replaceChildren(...draft.map((item, index) => {
+  function renderList() {
+    list.replaceChildren(...saved.map((item, index) => {
       const row = document.createElement('li');
       row.dataset.index = index;
+      row.classList.toggle('editing', item === editing);
       const name = document.createElement('div');
       name.className = 'keybind-name';
       name.textContent = chord(item);
@@ -79,22 +80,33 @@
     }));
   }
 
-  function hasEdits() {
-    return editIndex !== null || keySelect.selectedIndex > 0 || modifiers.some(input => input.checked);
+  function save(items, selected) {
+    try {
+      validate(items);
+      localStorage.setItem(storageKey, JSON.stringify(items));
+    } catch (issue) {
+      syncForm(); renderList();
+      error(`Keys were not saved: ${issue.message}`);
+      return false;
+    }
+    saved = items;
+    editing = selected;
+    syncForm(); renderKeys(); renderList(); error();
+    return true;
   }
 
   function remove(index) {
-    if (hasEdits()) { error('Save or cancel the key you are editing before deleting.'); return; }
-    draft.splice(index, 1); renderDraft(); error();
+    finishDrag(false);
+    save(saved.filter((_, position) => position !== index), saved[index] === editing ? null : editing);
   }
 
   function move(index, direction) {
-    if (hasEdits()) { error('Save or cancel the key you are editing before reordering.'); return; }
+    finishDrag(false);
     const target = index + direction;
-    if (target < 0 || target >= draft.length) return;
-    [draft[index], draft[target]] = [draft[target], draft[index]];
-    renderDraft(); error();
-    list.children[target].querySelector('.keybind-name').focus();
+    if (target < 0 || target >= saved.length) return;
+    const items = [...saved];
+    [items[index], items[target]] = [items[target], items[index]];
+    if (save(items, editing)) list.children[target].querySelector('.keybind-name').focus();
   }
 
   function positionDrag() {
@@ -125,17 +137,17 @@
     const current = drag;
     drag = null;
     cancelAnimationFrame(current.frame);
+    if (list.hasPointerCapture(current.pointer)) list.releasePointerCapture(current.pointer);
     if (commit) {
       const target = [...list.children].filter(row => row !== current.row).indexOf(current.placeholder);
-      draft.splice(target, 0, draft.splice(current.index, 1)[0]);
-    }
-    if (list.hasPointerCapture(current.pointer)) list.releasePointerCapture(current.pointer);
-    renderDraft();
+      const items = [...saved];
+      items.splice(target, 0, items.splice(current.index, 1)[0]);
+      save(items, editing);
+    } else renderList();
   }
 
   list.addEventListener('pointerdown', event => {
     if (event.button !== 0 || drag || !event.target.closest('.keybind-name')) return;
-    if (hasEdits()) { error('Save or cancel the key you are editing before reordering.'); return; }
     event.preventDefault();
     const row = event.target.closest('li');
     const bounds = row.getBoundingClientRect();
@@ -163,49 +175,35 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) finishDrag(false); });
 
   function edit(index) {
-    if (hasEdits()) { error('Save or cancel the key you are editing first.'); return; }
-    editIndex = index;
-    const item = draft[index];
-    keySelect.value = item.key;
-    for (const input of modifiers) input.checked = item.modifiers.includes(input.value);
-    $('keybind-save').textContent = 'Save key';
-    $('keybind-edit-cancel').hidden = false;
+    finishDrag(false);
+    editing = saved[index];
+    syncForm(); renderList();
     form.scrollIntoView({block: 'nearest'});
     error();
   }
 
-  form.addEventListener('submit', event => {
-    event.preventDefault();
+  form.addEventListener('submit', event => event.preventDefault());
+  form.addEventListener('change', () => {
+    if (!keySelect.value) return;
+    finishDrag(false);
     const item = {key: keySelect.value, modifiers: modifiers.filter(input => input.checked).map(input => input.value)};
-    try {
-      validate([item]);
-      if (item.key === 'delete' && item.modifiers.includes('ctrl') && item.modifiers.includes('alt')) throw new Error('Windows does not allow Ctrl+Alt+Delete through a remote shortcut.');
-      if (editIndex === null) {
-        if (draft.length === 64) throw new Error('You can save up to 64 keys.');
-        draft.push(item);
-      } else draft[editIndex] = item;
-      resetForm(); renderDraft(); error();
-    } catch (issue) { error(issue.message); }
+    const items = [...saved];
+    if (editing === null) items.push(item);
+    else items[saved.indexOf(editing)] = item;
+    save(items, item);
   });
-  form.addEventListener('input', () => { $('keybind-edit-cancel').hidden = !hasEdits(); });
-  $('keybind-edit-cancel').addEventListener('click', () => { resetForm(); error(); });
+  $('keybind-add').addEventListener('click', () => {
+    finishDrag(false);
+    editing = null; syncForm(); renderList(); error(); keySelect.focus();
+  });
   $('edit-keys').addEventListener('click', () => {
     document.dispatchEvent(new Event('inputeditoropen'));
-    draft = saved.map(item => ({key: item.key, modifiers: [...item.modifiers]})); resetForm(); renderDraft(); error();
+    editing = null; syncForm(); renderList(); error();
     dialog.showModal(); document.body.classList.add('editing-keys');
   });
   function close() { finishDrag(false); dialog.close(); document.body.classList.remove('editing-keys'); }
-  for (const id of ['keys-cancel', 'keys-close']) $(id).addEventListener('click', close);
+  for (const id of ['keys-done', 'keys-close']) $(id).addEventListener('click', close);
   dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
-  $('keys-done').addEventListener('click', () => {
-    finishDrag(false);
-    if (hasEdits()) { error('Save or cancel the key you are editing before tapping Done.'); return; }
-    try {
-      validate(draft);
-      localStorage.setItem(storageKey, JSON.stringify(draft));
-      saved = draft; renderKeys(); close();
-    } catch (issue) { error(issue.message); }
-  });
 
   async function load() {
     try {

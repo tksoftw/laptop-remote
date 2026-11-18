@@ -21,7 +21,7 @@ If the installed phone app needs pairing, use its **Scan QR code** button. Pairi
 
 - Minimize to keep running in the tray. Close the window or choose **Quit** to stop.
 - Hold **Left click** or **Right click** with one finger while moving the joystick with another. Release to drop.
-- Tap **Edit** beside **Keys** to add or change key combinations. Drag the key names up or down to reorder them. Buttons stay in rows of four and are saved on that phone.
+- Tap **Edit** beside **Keys** to add or change key combinations. Drag the key names up or down to reorder them. Changes save immediately. Buttons stay in rows of four and are saved on that phone.
 - On the control screen, expand **Save to your phone** for **Advanced: Show screen**. **Crop** uses a still image; **Done** resumes the live preview.
 - **Unpair all devices** revokes saved pairings.
 
