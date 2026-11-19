@@ -16,10 +16,11 @@ import webbrowser
 import psutil
 import win32event
 
-from pairing_keys import load_token, rotate_token
-from settings import PORT, ROOT, STATE_DIR
+from .pairing_keys import load_token, rotate_token
+from .settings import PORT, PYTHON, ROOT, STATE_DIR
 
 ADDRESS = f'http://127.0.0.1:{PORT}'
+SERVER_ARGS = ['-u', '-m', 'laptop_remote.server']
 INSTANCE_NAME = 'Local\\LaptopRemote-' + hashlib.sha256(str(ROOT).encode()).hexdigest()[:16]
 LOG = logging.getLogger('laptop_remote.service')
 
@@ -43,17 +44,11 @@ def operation_lock():
 
 
 def verify_server(process):
-    interpreters = {ROOT / '.venv' / 'Scripts' / 'python.exe', Path(sys._base_executable).with_name('python.exe')}
+    interpreters = {PYTHON, Path(sys._base_executable).with_name('python.exe')}
     command = process.cmdline()
-    arguments = command[1:]
-    if arguments and arguments[0] == '-u':
-        arguments = arguments[1:]
-    if Path(process.exe()) not in interpreters or not arguments or arguments[0].startswith('-'):
+    if Path(process.exe()) not in interpreters:
         raise RuntimeError(f'Port {PORT} is occupied by a different program. It was left untouched.')
-    script = Path(arguments[0])
-    if not script.is_absolute():
-        script = Path(process.cwd()) / script
-    if script.resolve() != ROOT / 'server.py':
+    if command[1:] != SERVER_ARGS or Path(process.cwd()).resolve() != ROOT:
         raise RuntimeError(f'Port {PORT} is occupied by a different Python program. It was left untouched.')
     return process
 
@@ -105,7 +100,7 @@ def _start_server():
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     with (STATE_DIR / 'startup.log').open('a', encoding='utf-8') as errors:
         process = subprocess.Popen(
-            [str(ROOT / '.venv' / 'Scripts' / 'python.exe'), '-u', str(ROOT / 'server.py')],
+            [str(PYTHON), *SERVER_ARGS],
             cwd=ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=errors,
             text=True, creationflags=subprocess.CREATE_NO_WINDOW,
         )

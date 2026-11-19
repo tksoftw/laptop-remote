@@ -10,8 +10,8 @@ from PIL import Image, ImageDraw, ImageTk
 import pystray
 import win32event
 
-import service
-from settings import ROOT, STATE_DIR
+from . import service
+from .settings import ROOT, STATE_DIR
 
 BG = '#101513'
 PANEL = '#253228'

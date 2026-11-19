@@ -7,19 +7,22 @@ Control a Windows laptop from your phone: playback, volume, mouse, typing and cu
 Requires **Windows 10/11 and Python 3.11+** on PATH. Connect the phone and laptop to the same trusted network.
 
 1. Download and extract this repository, or clone it.
-2. Open PowerShell in its folder and run:
+2. Open Command Prompt (`cmd.exe`) in its folder and run:
 
-   ```powershell
+   ```bat
    python -m venv .venv
-   .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-   .\.venv\Scripts\python.exe install_shortcut.py
+   .venv\Scripts\activate
+   python -m pip install -e .
+   python -m laptop_remote.install_shortcut
    ```
 
 3. Open **Laptop Remote** from your desktop, or run:
 
-   ```powershell
-   .\.venv\Scripts\pythonw.exe .\control_panel.py
+   ```bat
+   pythonw -m laptop_remote
    ```
+
+In a new terminal, activate the venv again before running Python commands. The desktop shortcut works without activation.
 
 Click **Pair**, then scan the QR with your phone. Save the page to your home screen if wanted. If the installed phone app needs pairing, use its **Scan QR code** button. Pairing is remembered.
 
@@ -37,8 +40,10 @@ Logs and the encrypted pairing key live in `%LOCALAPPDATA%\LaptopRemote`, outsid
 
 ## Development
 
-```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+With the venv activated:
+
+```bat
+python -m unittest discover -s tests -v
 ```
 
-`vendor_qr.py` downloads the pinned ZXing reader and verifies its hash; third-party licenses are in `web/vendor`.
+App code, web files and icons live in `src/laptop_remote/`. To refresh the pinned QR reader, run `python -m laptop_remote.vendor_qr`; third-party licenses are in `src/laptop_remote/web/vendor`.

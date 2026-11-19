@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 
 from aiohttp import web
 
-import pairing_keys
-from server import COOKIE_NAME, LISTEN_PORT, TOKEN, guard, pair_session, require_local
+from laptop_remote import pairing_keys
+from laptop_remote.server import COOKIE_NAME, LISTEN_PORT, TOKEN, guard, pair_session, require_local
 
 
 class SecurityTests(unittest.IsolatedAsyncioTestCase):
@@ -61,7 +61,7 @@ class SecurityTests(unittest.IsolatedAsyncioTestCase):
     def test_pairing_key_is_encrypted_and_rotation_persists(self):
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
-            with patch('pairing_keys.STATE_DIR', folder), patch('pairing_keys.TOKEN_FILE', folder / 'key.dpapi'):
+            with patch('laptop_remote.pairing_keys.STATE_DIR', folder), patch('laptop_remote.pairing_keys.TOKEN_FILE', folder / 'key.dpapi'):
                 original = pairing_keys.load_token()
                 pairing_keys.rotate_token()
                 changed = pairing_keys.load_token()

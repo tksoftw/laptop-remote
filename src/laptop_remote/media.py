@@ -6,7 +6,7 @@ import platform
 
 from pycaw.pycaw import AudioUtilities
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionManager
-from errors import ControlError
+from .errors import ControlError
 
 
 class WindowsMedia:

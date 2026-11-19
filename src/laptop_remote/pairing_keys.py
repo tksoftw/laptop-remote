@@ -4,7 +4,7 @@ import secrets
 
 import win32crypt
 
-from settings import STATE_DIR
+from .settings import STATE_DIR
 
 TOKEN_FILE = STATE_DIR / 'pairing-key.dpapi'
 

@@ -6,8 +6,8 @@ import json
 import re
 from ctypes import wintypes
 
-from errors import ControlError
-from settings import ROOT
+from .errors import ControlError
+from .settings import ROOT
 
 KEYS = {item['key']: item for item in json.loads((ROOT / 'web' / 'keymap.json').read_text(encoding='utf-8'))}
 MODIFIERS = {'ctrl': (0x11, 0), 'alt': (0x12, 0), 'shift': (0x10, 0), 'win': (0x5b, 1)}

@@ -2,9 +2,10 @@
 import base64
 import hashlib
 import io
-from pathlib import Path
 import tarfile
 import urllib.request
+
+from .settings import ROOT
 
 URL = 'https://registry.npmjs.org/zxing-wasm/-/zxing-wasm-3.1.7.tgz'
 SHA512 = 'LI94ndlOY+xoqlkNcc0EwByrMpUXKrCX171EQ38kGWqpiRq/gcnC+ZrbRipvxI3uV4LaDtNlKo1p9Uayg1sesQ=='
@@ -21,7 +22,7 @@ def main():
         license_text = response.read()
     if hashlib.sha256(license_text).hexdigest() != CPP_LICENSE_SHA256:
         raise RuntimeError('The ZXing C++ license does not match its pinned SHA-256.')
-    destination = Path(__file__).resolve().parent / 'web' / 'vendor'
+    destination = ROOT / 'web' / 'vendor'
     destination.mkdir(exist_ok=True)
     with tarfile.open(fileobj=io.BytesIO(archive), mode='r:gz') as package:
         for member, name in [('package/dist/iife/reader/index.js', 'zxing-reader.js'), ('package/dist/reader/zxing_reader.wasm', 'zxing_reader.wasm'), ('package/LICENSE', 'zxing-LICENSE.txt')]:

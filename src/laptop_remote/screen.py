@@ -8,7 +8,7 @@ import threading
 from PIL import Image, ImageDraw, ImageGrab
 import win32gui
 
-from errors import ControlError
+from .errors import ControlError
 
 
 def parse_view(query):

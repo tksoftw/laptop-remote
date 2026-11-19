@@ -6,4 +6,4 @@
 *.md text eol=lf
 *.wasm binary
 *.ico binary
-web/vendor/* -whitespace
+src/laptop_remote/web/vendor/* -whitespace

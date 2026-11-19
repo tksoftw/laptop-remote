@@ -5,32 +5,32 @@ import pythoncom
 from win32com.shell import shell, shellcon
 from win32com.propsys import propsys, pscon
 
-from control_panel import APP_ID
-from settings import ROOT
+from .control_panel import APP_ID
+from .settings import PYTHON, ROOT
 
 
 def install(directory=None):
     desktop = Path(directory) if directory else Path(shell.SHGetFolderPath(0, shellcon.CSIDL_DESKTOPDIRECTORY, None, 0))
     destination = desktop / 'Laptop Remote.lnk'
-    target = ROOT / '.venv' / 'Scripts' / 'pythonw.exe'
+    target = PYTHON.with_name('pythonw.exe')
     icon = ROOT / 'assets' / 'remote.ico'
-    script = ROOT / 'control_panel.py'
+    script = ROOT / '__main__.py'
     for path in (target, icon, script):
         if not path.is_file():
             raise FileNotFoundError(f'Required file is missing: {path}')
     shortcut = pythoncom.CoCreateInstance(shell.CLSID_ShellLink, None, pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink)
+    properties = shortcut.QueryInterface(propsys.IID_IPropertyStore)
     file = shortcut.QueryInterface(pythoncom.IID_IPersistFile)
     if destination.exists():
         file.Load(str(destination), 2)
         existing, _ = shortcut.GetPath(shell.SLGP_RAWPATH)
-        if Path(existing) != target or shortcut.GetArguments() != f'"{script}"':
+        if Path(existing) != target or properties.GetValue(pscon.PKEY_AppUserModel_ID).GetValue() != APP_ID:
             raise RuntimeError('The existing Laptop Remote shortcut points elsewhere. Rename it, then run setup again.')
     shortcut.SetPath(str(target))
-    shortcut.SetArguments(f'"{script}"')
+    shortcut.SetArguments('-m laptop_remote')
     shortcut.SetWorkingDirectory(str(ROOT))
     shortcut.SetIconLocation(str(icon), 0)
     shortcut.SetDescription('Laptop Remote')
-    properties = shortcut.QueryInterface(propsys.IID_IPropertyStore)
     properties.SetValue(pscon.PKEY_AppUserModel_ID, propsys.PROPVARIANTType(APP_ID))
     properties.Commit()
     file.Save(str(destination), True)

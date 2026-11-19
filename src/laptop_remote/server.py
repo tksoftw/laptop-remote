@@ -14,12 +14,12 @@ from aiohttp import web
 import qrcode
 import qrcode.image.svg
 
-from errors import ControlError
-from media import WindowsMedia
-from desktop import WindowsDesktop
-from screen import WindowsScreen, parse_view
-from pairing_keys import load_token
-from settings import PORT, ROOT, STATE_DIR
+from .errors import ControlError
+from .media import WindowsMedia
+from .desktop import WindowsDesktop
+from .screen import WindowsScreen, parse_view
+from .pairing_keys import load_token
+from .settings import PORT, ROOT, STATE_DIR
 
 STATIC_FILES = {'/': 'index.html', '/app.js': 'app.js', '/desktop.js': 'desktop.js', '/keybinds.js': 'keybinds.js', '/keymap.json': 'keymap.json', '/screen.js': 'screen.js', '/pairing.js': 'pairing.js', '/qr-reader.js': 'qr-reader.js', '/vendor/zxing-reader.js': 'vendor/zxing-reader.js', '/vendor/zxing_reader.wasm': 'vendor/zxing_reader.wasm', '/style.css': 'style.css', '/icon.svg': 'icon.svg', '/manifest.webmanifest': 'manifest.webmanifest'}
 LOG = logging.getLogger('laptop_remote')
