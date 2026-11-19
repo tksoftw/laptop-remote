@@ -10,9 +10,8 @@ jobs:
       - uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.11'
-      - run: ./setup.ps1 -NoShortcut
-        shell: pwsh
-      - run: ./.venv/Scripts/python.exe -m unittest discover -v
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
       - name: Check browser scripts
         shell: pwsh
         run: |

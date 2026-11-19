@@ -4,18 +4,24 @@ Control a Windows laptop from your phone: playback, volume, mouse, typing and cu
 
 ## Setup
 
-Requires **Windows 10/11 and Python 3.11+**. Connect the phone and laptop to the same trusted network.
+Requires **Windows 10/11 and Python 3.11+** on PATH. Connect the phone and laptop to the same trusted network.
 
 1. Download and extract this repository, or clone it.
 2. Open PowerShell in its folder and run:
 
    ```powershell
-   powershell -ExecutionPolicy Bypass -File .\setup.ps1
+   python -m venv .venv
+   .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+   .\.venv\Scripts\python.exe install_shortcut.py
    ```
 
-3. Open **Laptop Remote** from your desktop. Click **Pair**, then scan the QR with your phone. Save the page to your home screen if wanted.
+3. Open **Laptop Remote** from your desktop, or run:
 
-If the installed phone app needs pairing, use its **Scan QR code** button. Pairing is remembered. If Python is not on PATH, pass `-Python "C:\path\to\python.exe"` to setup.
+   ```powershell
+   .\.venv\Scripts\pythonw.exe .\control_panel.py
+   ```
+
+Click **Pair**, then scan the QR with your phone. Save the page to your home screen if wanted. If the installed phone app needs pairing, use its **Scan QR code** button. Pairing is remembered.
 
 ## Use
 
@@ -32,8 +38,7 @@ Logs and the encrypted pairing key live in `%LOCALAPPDATA%\LaptopRemote`, outsid
 ## Development
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest discover -v
-.\.venv\Scripts\python.exe verify_pairing.py
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-The browser fixture uses dummy devices on `127.0.0.2:48737`. `vendor_qr.py` downloads the pinned ZXing reader and verifies its hash; third-party licenses are in `web/vendor`.
+`vendor_qr.py` downloads the pinned ZXing reader and verifies its hash; third-party licenses are in `web/vendor`.

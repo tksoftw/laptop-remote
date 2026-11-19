@@ -4,7 +4,6 @@
 *.css text eol=lf
 *.html text eol=lf
 *.md text eol=lf
-*.ps1 text eol=crlf
 *.wasm binary
 *.ico binary
 web/vendor/* -whitespace

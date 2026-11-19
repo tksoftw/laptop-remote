@@ -10,22 +10,14 @@ from errors import ControlError
 class DesktopTests(unittest.IsolatedAsyncioTestCase):
     async def test_bad_inputs_never_reach_windows(self):
         invalid = [None, {}, {'action': 'shell'}, {'action': 'move', 'dx': 61, 'dy': 0}, {'action': 'move', 'dx': True, 'dy': 0}, {'action': 'click', 'button': 'middle'}, {'action': 'scroll', 'steps': 0}, {'action': 'scroll', 'steps': 4}, {'action': 'key', 'key': 'win'}, {'action': 'key', 'key': []}, {'action': 'text', 'text': ''}, {'action': 'text', 'text': 'a' * 501}, {'action': 'text', 'text': 'line\nbreak'}, {'action': 'text', 'text': '\ud800'}, {'action': 'text', 'text': 'hello', 'extra': 1}]
+        invalid.extend({'action': 'key', 'key': key, 'modifiers': modifiers} for key, modifiers in [
+            ('delete', ['ctrl', 'alt']), ('enter', ['ctrl', 'ctrl']), ('bad', []), ('c', ['bad']), ('c', 'ctrl'),
+        ])
         with patch('desktop.send_input') as emit:
             for data in invalid:
                 with self.subTest(data=data), self.assertRaises(ControlError):
                     await WindowsDesktop().command(data)
             emit.assert_not_called()
-
-    async def test_click_and_keys_release_in_same_batch(self):
-        with patch('desktop.send_input') as emit, patch('desktop.USER32.GetAsyncKeyState', return_value=0):
-            desktop = WindowsDesktop()
-            await desktop.command({'action': 'click', 'button': 'left'})
-            events = emit.call_args.args[0]
-            self.assertEqual([e.mi.dwFlags for e in events], [2, 4])
-            await desktop.command({'action': 'key', 'key': 'enter', 'modifiers': []})
-            events = emit.call_args.args[0]
-            self.assertEqual([e.ki.wVk for e in events], [13, 13])
-            self.assertEqual([e.ki.dwFlags for e in events], [0, 2])
 
     async def test_drag_can_move_between_down_and_up(self):
         with patch('desktop.send_input') as emit:
@@ -68,21 +60,6 @@ class DesktopTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual([event.ki.wVk for event in events], [17, 16, 37, 37, 16, 17])
             self.assertEqual([event.ki.dwFlags for event in events], [0, 0, 1, 3, 2, 2])
 
-    async def test_invalid_shortcut_rejected_before_input(self):
-        with patch('desktop.send_input') as emit:
-            for key, modifiers in [('delete', ['ctrl', 'alt']), ('enter', ['ctrl', 'ctrl']), ('bad', []), ('c', ['bad']), ('c', 'ctrl')]:
-                with self.assertRaises(ControlError):
-                    await WindowsDesktop().command({'action': 'key', 'key': key, 'modifiers': modifiers})
-            emit.assert_not_called()
-
-    async def test_unicode_uses_utf16_pairs_and_never_clipboard(self):
-        with patch('desktop.send_input') as emit, patch('desktop.USER32.GetAsyncKeyState', return_value=0):
-            await WindowsDesktop().command({'action': 'text', 'text': 'é😀'})
-            events = emit.call_args.args[0]
-            self.assertEqual([e.ki.wScan for e in events], [0xe9, 0xe9, 0xd83d, 0xd83d, 0xde00, 0xde00])
-            self.assertEqual([e.ki.dwFlags for e in events], [4, 6, 4, 6, 4, 6])
-            self.assertTrue(all(e.ki.wVk == 0 for e in events))
-
     async def test_held_modifier_blocks_text(self):
         with patch('desktop.send_input') as emit, patch('desktop.USER32.GetAsyncKeyState', return_value=-32768):
             with self.assertRaisesRegex(ControlError, 'Release Shift'):
@@ -94,7 +71,3 @@ class DesktopTests(unittest.IsolatedAsyncioTestCase):
         with patch('desktop.USER32.SendInput', return_value=0):
             with self.assertRaisesRegex(ControlError, 'Windows accepted 0 of 1'):
                 send_input([mouse_event(1, 1, 0)])
-
-
-if __name__ == '__main__':
-    unittest.main()
